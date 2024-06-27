@@ -84,7 +84,7 @@ router.get("/(.*)", async (context) => {
 			<div class="bg-white">
 			  ${
           [".png", ".gif", ".jpg", ".jpeg"].includes(fileExtention)
-            ? `<img class="h-52 mx-auto mb-4 object-cover" src="${fullSavePath}&download" alt="${saveFileName}">`
+            ? `<img class="h-96 mx-auto mb-4 object-cover" src="${fullSavePath}&download" alt="${saveFileName}">`
             : ""
         }
 		</div>
