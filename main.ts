@@ -52,7 +52,7 @@ router.get("/(.*)", async (context) => {
       console.log(err);
     }
   } else {
-    const fileExists = s3.exists(`${param}`);
+    const fileExists = await s3.exists(`${param}`);
 
     if (await fileExists === false) {
       context.response.status = 302;
