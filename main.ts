@@ -36,7 +36,7 @@ router.get("/(.*)", async (context) => {
     return;
   }
 
-  if (param.endsWith("&download") || host == "connormoulton.com") {
+  if (param.endsWith("&download")) {
     const modParam = param.slice(0, -9);
     const result = await s3.getObject(`${modParam}`);
     try {
