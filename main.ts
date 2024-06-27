@@ -32,31 +32,38 @@ router.get("/(.*)", async (context) => {
 
   if (!param) {
     context.response.status = 302;
-    context.response.redirect("https://connormoulton.com");
+    context.response.redirect(env.REDIRECT_URL);
     return;
   }
 
   if (param.endsWith("&download")) {
     const modParam = param.slice(0, -9);
-    const result = await s3.getObject(`${modParam}`);
-    try {
-      fileExtention = extname(modParam);
-      saveFileName = basename(modParam, fileExtention);
-      fullSavePath = `${saveFileName}${fileExtention}`;
-      context.response.headers.set(
-        "Content-Disposition",
-        `attachment; filename="${fullSavePath}"`,
-      );
-      context.response.body = result.body;
-    } catch (err) {
-      console.log(err);
+    const fileExists = await s3.exists(`${modParam}`);
+    if (await fileExists === false) {
+      context.response.status = 302;
+      context.response.redirect(env.REDIRECT_URL);
+      return;
+    } else {
+      const result = await s3.getObject(`${modParam}`);
+      try {
+        fileExtention = extname(modParam);
+        saveFileName = basename(modParam, fileExtention);
+        fullSavePath = `${saveFileName}${fileExtention}`;
+        context.response.headers.set(
+          "Content-Disposition",
+          `attachment; filename="${fullSavePath}"`,
+        );
+        context.response.body = result.body;
+      } catch (err) {
+        console.log(err);
+      }
     }
   } else {
     const fileExists = await s3.exists(`${param}`);
 
     if (await fileExists === false) {
       context.response.status = 302;
-      context.response.redirect("https://connormoulton.com");
+      context.response.redirect(env.REDIRECT_URL);
       return;
     } else {
       // const result = await s3.getObject(`${param}`);
@@ -71,7 +78,7 @@ router.get("/(.*)", async (context) => {
 			<title>cloud.connormoulton.com/${fullSavePath}</title>
 			<script src="https://cdn.tailwindcss.com"></script>
 		  </head>
-		  <body class="flex items-center justify-center min-h-screen bg-white dark:bg-black">
+		  <body class="flex items-center justify-center min-h-screen bg-white dark:bg-black font-mono">
 		  <a href="${fullSavePath}&download">
 			<div class="bg-white dark:bg-black border border-black dark:border-white p-8 text-center hover:bg-gray-500 hover:bg-opacity-20">
 			<div class="bg-white">
@@ -81,7 +88,7 @@ router.get("/(.*)", async (context) => {
             : ""
         }
 		</div>
-			 <div class="text-black dark:text-white no-underline text-lg font-bold"> ${saveFileName} <span class="p-0.5 border border-black dark:border-white rounded-md font-mono font-normal text-sm uppercase">${
+			 <div class="text-black dark:text-white no-underline text-lg"> ${saveFileName} <span class="p-0.5 border border-black dark:border-white font-mono font-normal text-sm uppercase">${
           fileExtention.slice(1)
         }</span>
 			</div>
@@ -93,8 +100,8 @@ router.get("/(.*)", async (context) => {
 	  `;
       } catch (error) {
         console.error(error);
-        //   context.response.status = 500;
-        //   context.response.body = { error: "Failed to generate download link" };
+        context.response.status = 500;
+        context.response.body = { error: "Failed to generate download link" };
       }
     }
   }
@@ -104,5 +111,4 @@ const app = new Application();
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-console.log("Server is running on http://localhost:8000");
 await app.listen({ port: 8000 });
