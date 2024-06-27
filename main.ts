@@ -1,9 +1,16 @@
 import { Application, Router } from "https://deno.land/x/oak@v16.1.0/mod.ts";
-import { load } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
+import { config } from "https://deno.land/x/dotenv/mod.ts";
 import { basename, extname } from "https://deno.land/std@0.224.0/path/mod.ts";
 import { S3Client } from "https://deno.land/x/s3_lite_client@0.7.0/mod.ts";
 
-const env = await load();
+if (Deno.env.get("DENO_DEPLOYMENT_ID") === undefined) {
+  const env = config();
+  for (const key in env) {
+    Deno.env.set(key, env[key]);
+  }
+}
+
+const env = Deno.env.toObject();
 
 const s3 = new S3Client({
   endPoint: env.B2_ENDPOINT,
