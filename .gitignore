@@ -4,7 +4,7 @@ node_modules/
 # Deno
 .deno/
 deno.lock
-deno.json
+<!-- deno.json -->
 deno.jsonc
 import_map.json
 
