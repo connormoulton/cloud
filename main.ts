@@ -4,71 +4,71 @@ import { basename, extname } from "https://deno.land/std@0.224.0/path/mod.ts";
 import { S3Client } from "https://deno.land/x/s3_lite_client@0.7.0/mod.ts";
 
 if (Deno.env.get("DENO_DEPLOYMENT_ID") === undefined) {
-  const env = config();
-  for (const key in env) {
-    Deno.env.set(key, env[key]);
-  }
+	const env = config();
+	for (const key in env) {
+		Deno.env.set(key, env[key]);
+	}
 }
 
 const env = Deno.env.toObject();
 
 const s3 = new S3Client({
-  endPoint: env.B2_ENDPOINT,
-  accessKey: env.B2_ACCESS_KEY_ID,
-  secretKey: env.B2_SECRET_ACCESS_KEY,
-  bucket: env.B2_BUCKET_NAME,
-  pathStyle: true,
-  region: "us-west",
+	endPoint: env.S3_ENDPOINT,
+	accessKey: env.S3_ACCESS_KEY_ID,
+	secretKey: env.S3_SECRET_ACCESS_KEY,
+	bucket: env.S3_BUCKET_NAME,
+	pathStyle: true,
+	region: "us-west",
 });
 
 const router = new Router();
 router.get("/(.*)", async (context) => {
-  const param = context.params[0];
-  const host = context.request.url.hostname;
-  // const fullUrl = context.request.url;
-  let fileExtention = extname(param);
-  let saveFileName = basename(param, fileExtention);
-  let fullSavePath = `${saveFileName}${fileExtention}`;
+	const param = context.params[0];
+	const host = context.request.url.hostname;
+	// const fullUrl = context.request.url;
+	let fileExtension = extname(param);
+	let saveFileName = basename(param, fileExtension);
+	let fullSavePath = `${saveFileName}${fileExtension}`;
 
-  if (!param) {
-    context.response.status = 302;
-    context.response.redirect(env.REDIRECT_URL);
-    return;
-  }
+	if (!param) {
+		context.response.status = 302;
+		context.response.redirect(env.REDIRECT_URL);
+		return;
+	}
 
-  if (param.endsWith("&download")) {
-    const modParam = param.slice(0, -9);
-    const fileExists = await s3.exists(`${modParam}`);
-    if (await fileExists === false) {
-      context.response.status = 302;
-      context.response.redirect(env.REDIRECT_URL);
-      return;
-    } else {
-      const result = await s3.getObject(`${modParam}`);
-      try {
-        fileExtention = extname(modParam);
-        saveFileName = basename(modParam, fileExtention);
-        fullSavePath = `${saveFileName}${fileExtention}`;
-        context.response.headers.set(
-          "Content-Disposition",
-          `attachment; filename="${fullSavePath}"`,
-        );
-        context.response.body = result.body;
-      } catch (err) {
-        console.log(err);
-      }
-    }
-  } else {
-    const fileExists = await s3.exists(`${param}`);
+	if (param.endsWith("&download")) {
+		const modParam = param.slice(0, -9);
+		const fileExists = await s3.exists(`${modParam}`);
+		if (await fileExists === false) {
+			context.response.status = 302;
+			context.response.redirect(env.REDIRECT_URL);
+			return;
+		} else {
+			const result = await s3.getObject(`${modParam}`);
+			try {
+				fileExtension = extname(modParam);
+				saveFileName = basename(modParam, fileExtension);
+				fullSavePath = `${saveFileName}${fileExtension}`;
+				context.response.headers.set(
+					"Content-Disposition",
+					`attachment; filename="${fullSavePath}"`,
+				);
+				context.response.body = result.body;
+			} catch (err) {
+				console.log(err);
+			}
+		}
+	} else {
+		const fileExists = await s3.exists(`${param}`);
 
-    if (await fileExists === false) {
-      context.response.status = 302;
-      context.response.redirect(env.REDIRECT_URL);
-      return;
-    } else {
-      // const result = await s3.getObject(`${param}`);
-      try {
-        context.response.body = `
+		if (await fileExists === false) {
+			context.response.status = 302;
+			context.response.redirect(env.REDIRECT_URL);
+			return;
+		} else {
+			// const result = await s3.getObject(`${param}`);
+			try {
+				context.response.body = `
 		<!DOCTYPE html>
 		<html lang="en">
 		  <head>
@@ -78,19 +78,36 @@ router.get("/(.*)", async (context) => {
 			<title>cloud.connormoulton.com/${fullSavePath}</title>
 			<script src="https://cdn.tailwindcss.com"></script>
 		  </head>
-		  <body class="flex items-center justify-center min-h-screen bg-white dark:bg-black font-mono">
+		  <body class="flex items-center justify-center min-h-screen bg-white dark:bg-[#121212] font-mono">
+      <div>
+${
+					(() => {
+						const imageExtensions = [".png", ".gif", ".jpg", ".jpeg"];
+						const videoExtensions = [".mp4", ".mov", ".webm"];
+
+						const imageTag = imageExtensions.includes(fileExtension)
+							? `<img class="h-96 mx-auto mb-4 object-cover" src="${fullSavePath}&download" alt="${saveFileName}">`
+							: "";
+
+						// const videoTag = videoExtensions.includes(fileExtension)
+						// 	? `<video class="h-96 mx-auto mb-4 object-cover" preload="auto" controls>
+						//      <source src="${fullSavePath}&download" type="video/${
+						// 		fileExtension.slice(1)
+						// 	}">
+						//      Your browser does not support the video tag.
+						//    </video>`
+						// 	: "";
+
+						return `${imageTag}`;
+					})()
+				}
+      </div>
 		  <a href="${fullSavePath}&download">
-			<div class="bg-white dark:bg-black border border-black dark:border-white p-8 text-center hover:bg-gray-500 hover:bg-opacity-20">
-			<div class="bg-white">
-			  ${
-          [".png", ".gif", ".jpg", ".jpeg"].includes(fileExtention)
-            ? `<img class="h-96 mx-auto mb-4 object-cover" src="${fullSavePath}&download" alt="${saveFileName}">`
-            : ""
-        }
-		</div>
-			 <div class="text-black dark:text-white no-underline text-lg"> ${saveFileName} <span class="p-0.5 border border-black dark:border-white font-mono font-normal text-sm uppercase">${
-          fileExtention.slice(1)
-        }</span>
+			<div class="bg-white dark:bg-[#121212] border border-[#121212] dark:border-white p-8 text-center hover:bg-gray-500 hover:bg-opacity-20">
+
+			 <div class="text-[#121212] dark:text-white no-underline text-lg"> ${saveFileName} <span class="p-0.5 border border-[#121212] dark:border-white font-mono font-normal text-sm uppercase">${
+					fileExtension.slice(1)
+				}</span>
 			</div>
 			<p class="text-sm dark:text-white text-black">download</p>
 			</div>
@@ -98,13 +115,13 @@ router.get("/(.*)", async (context) => {
 		  </body>
 		</html>
 	  `;
-      } catch (error) {
-        console.error(error);
-        context.response.status = 500;
-        context.response.body = { error: "Failed to generate download link" };
-      }
-    }
-  }
+			} catch (error) {
+				console.error(error);
+				context.response.status = 500;
+				context.response.body = { error: "Failed to generate download link" };
+			}
+		}
+	}
 });
 
 const app = new Application();
