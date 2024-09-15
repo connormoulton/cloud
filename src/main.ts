@@ -25,13 +25,12 @@ const router = new Router();
 router.get("/share/(.*)", async (context) => {
 	const param = context.params[0];
 	const host = context.request.url.hostname;
-	// const fullUrl = context.request.url;
 	let fileExtension = extname(param);
 	let saveFileName = basename(param, fileExtension);
 	let fullSavePath = `${saveFileName}${fileExtension}`;
 
 	if (!param) {
-		context.response.status = 302;
+		context.response.status = 301;
 		context.response.redirect(env.REDIRECT_URL);
 		return;
 	}
@@ -39,7 +38,7 @@ router.get("/share/(.*)", async (context) => {
 	const fileExists = await s3.exists(`${param}`);
 
 	if (await fileExists === false) {
-		context.response.status = 302;
+		context.response.status = 301;
 		context.response.redirect(env.REDIRECT_URL);
 		return;
 	} else {
@@ -63,7 +62,7 @@ router.get("/share/(.*)", async (context) => {
 				fileExtension.slice(1)
 			}</span>
 			</div>
-			<p class="text-sm dark:text-white text-black">download</p>
+			<p class="text-sm dark:text-white text-black">view</p>
 			</div>
 			</a>
 		  </body>
@@ -73,7 +72,7 @@ router.get("/share/(.*)", async (context) => {
 			console.error(error);
 			context.response.status = 500;
 			context.response.body = {
-				error: "Failed to generate download link",
+				error: "Failed to generate view link",
 			};
 		}
 	}
@@ -82,20 +81,19 @@ router.get("/share/(.*)", async (context) => {
 router.get("/(.*)", async (context) => {
 	const param = context.params[0];
 	const host = context.request.url.hostname;
-	// const fullUrl = context.request.url;
 	let fileExtension = extname(param);
 	let saveFileName = basename(param, fileExtension);
 	let fullSavePath = `${saveFileName}${fileExtension}`;
 
 	if (!param) {
-		context.response.status = 302;
+		context.response.status = 301;
 		context.response.redirect(env.REDIRECT_URL);
 		return;
 	}
 
 	const fileExists = await s3.exists(`${param}`);
 	if (await fileExists === false) {
-		context.response.status = 302;
+		context.response.status = 301;
 		context.response.redirect(env.REDIRECT_URL);
 		return;
 	} else {
@@ -104,16 +102,43 @@ router.get("/(.*)", async (context) => {
 			fileExtension = extname(param);
 			saveFileName = basename(param, fileExtension);
 			fullSavePath = `${saveFileName}${fileExtension}`;
-			context.response.headers.set(
-				"Content-Disposition",
-				`attachment; filename="${fullSavePath}"`,
-			);
+			
+			// Set appropriate Content-Type header
+			const contentType = getContentType(fileExtension);
+			context.response.headers.set("Content-Type", contentType);
+			
+			// For non-image files, still allow download
+			if (!contentType.startsWith("image/")) {
+				context.response.headers.set(
+					"Content-Disposition",
+					`inline; filename="${fullSavePath}"`,
+				);
+			}
+			
 			context.response.body = result.body;
 		} catch (err) {
 			console.log(err);
 		}
 	}
 });
+
+function getContentType(fileExtension: string): string {
+	const contentTypes: { [key: string]: string } = {
+		".html": "text/html",
+		".css": "text/css",
+		".js": "application/javascript",
+		".json": "application/json",
+		".png": "image/png",
+		".jpg": "image/jpeg",
+		".jpeg": "image/jpeg",
+		".gif": "image/gif",
+		".svg": "image/svg+xml",
+		".pdf": "application/pdf",
+		".txt": "text/plain",
+	};
+	
+	return contentTypes[fileExtension.toLowerCase()] || "application/octet-stream";
+}
 
 const app = new Application();
 app.use(router.routes());
