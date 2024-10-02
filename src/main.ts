@@ -62,7 +62,7 @@ router.get("/share/(.*)", async (context) => {
 				fileExtension.slice(1)
 			}</span>
 			</div>
-			<p class="text-sm dark:text-white text-black">view</p>
+			<p class="text-sm dark:text-white text-black">download</p>
 			</div>
 			</a>
 		  </body>
@@ -135,6 +135,23 @@ function getContentType(fileExtension: string): string {
 		".svg": "image/svg+xml",
 		".pdf": "application/pdf",
 		".txt": "text/plain",
+		".xml": "application/xml",
+		".mp3": "audio/mpeg",
+		".mp4": "video/mp4",
+		".webm": "video/webm",
+		".wav": "audio/wav",
+		".ogg": "audio/ogg",
+		".zip": "application/zip",
+		".doc": "application/msword",
+		".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		".xls": "application/vnd.ms-excel",
+		".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		".ppt": "application/vnd.ms-powerpoint",
+		".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+		".csv": "text/csv",
+		".md": "text/markdown",
+		".ico": "image/x-icon",
+		".webp": "image/webp",
 	};
 	
 	return contentTypes[fileExtension.toLowerCase()] || "application/octet-stream";
